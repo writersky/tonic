@@ -115,6 +115,12 @@ class Request {
     public $noResource = 'NoResource';
     
     /**
+     * Name of resource class to use for when method is not allowed
+     * @var str
+     */
+    public $methodNotAllowedResource = 'MethodNotAllowedResource';
+    
+    /**
      * The resource classes loaded and how they are wired to URIs
      * @var str[]
      */
@@ -293,6 +299,11 @@ class Request {
         // 404 resource
         if (isset($config['404'])) {
             $this->noResource = $config['404'];
+        }
+        
+        // 405 resource
+        if (isset($config['405'])) {
+            $this->methodNotAllowedResource = $config['405'];
         }
         
         // mounts
@@ -590,16 +601,9 @@ class Resource {
             }
             
         } else {
-            
             // send 405 method not allowed
-            $response = new Response($request);
-            $response->code = Response::METHODNOTALLOWED;
-            $response->body = sprintf(
-                'The HTTP method "%s" used for the request is not allowed for the resource "%s".',
-                $request->method,
-                $request->uri
-            );
-            
+            $methodNotAllowedObj = new $request->methodNotAllowedResource(array());
+            return $methodNotAllowedObj->exec($request);
         }
         
         # good for debugging, remove this at some point
@@ -635,6 +639,31 @@ class NoResource extends Resource {
         
     }
     
+}
+
+/**
+ * 405 resource class
+ * @namespace Tonic\Lib
+ */
+class MethodNotAllowedResource extends Resource {
+    /**
+     * Always return a 404 response.
+     * @param Request request
+     * @return Response
+     */
+    function exec($request) {
+        
+        // send 404 not found
+        $response = new Response($request);
+        $response->code = Response::METHODNOTFOUND;
+        $response->body = sprintf(
+                'The HTTP method "%s" used for the request is not allowed for the resource "%s".',
+                $request->method,
+                $request->uri
+            );
+        return $response;
+        
+    }
 }
 
 /**
