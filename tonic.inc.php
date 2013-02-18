@@ -655,7 +655,7 @@ class MethodNotAllowedResource extends Resource {
         
         // send 404 not found
         $response = new Response($request);
-        $response->code = Response::METHODNOTFOUND;
+        $response->code = Response::METHODNOTALLOWED;
         $response->body = sprintf(
                 'The HTTP method "%s" used for the request is not allowed for the resource "%s".',
                 $request->method,
