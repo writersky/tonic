@@ -576,8 +576,12 @@ class Resource {
     function exec($request) {
         
         if (method_exists($this, $request->method)) {
-            
-            $method = new ReflectionMethod($this, $request->method);
+            $callableMethod = $request->method;
+            if ($request->method === 'HEAD') {
+                //perform a GET request internally. Let our Response object strip out the body
+                $callableMethod = 'GET';
+            }
+            $method = new ReflectionMethod($this, $callableMethod);
             $parameters = array();
             foreach ($method->getParameters() as $param) {
                 if ($param->name == 'request') {
@@ -592,7 +596,7 @@ class Resource {
             }
             
             $response = call_user_func_array(
-                array($this, $request->method),
+                array($this, $callableMethod),
                 $parameters
             );
             
@@ -652,8 +656,7 @@ class MethodNotAllowedResource extends Resource {
      * @return Response
      */
     function exec($request) {
-        
-        // send 404 not found
+        // send 405 method not allowed
         $response = new Response($request);
         $response->code = Response::METHODNOTALLOWED;
         $response->body = sprintf(
@@ -661,6 +664,11 @@ class MethodNotAllowedResource extends Resource {
                 $request->method,
                 $request->uri
             );
+        error_log(sprintf(
+                '405 Error: The HTTP method "%s" used for the request is not allowed for the resource "%s".',
+                $request->method,
+                $request->uri
+            ));
         return $response;
         
     }
@@ -834,6 +842,10 @@ class Response {
             }
         }
         
+        //HEAD has no body
+        if ($this->request->method === 'HEAD') {
+            $this->body = '';
+        }
         echo $this->body;
         
     }
